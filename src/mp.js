@@ -1,5 +1,5 @@
 // OpenCV + MediaPipe demo script
-// Load MediaPipe FaceMesh dynamically (supports dev bundler import, with CDN fallback for static hosts)
+import { FaceMesh } from '@mediapipe/face_mesh';
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
@@ -319,48 +319,9 @@ function onResults(results) {
   }
 }
 
-let faceMesh = null;
-
-async function ensureFaceMeshModule() {
-  // Try bundler-resolved package first; if that fails (browser can't resolve bare specifier), fall back to CDN
-  try {
-    return await import('@mediapipe/face_mesh');
-  } catch (err) {
-    // Browser / static host won't resolve bare specifiers — import from jsDelivr instead
-    const cdn = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
-    try {
-      return await import(/* @vite-ignore */ cdn);
-    } catch (e) {
-      // As a last resort, inject the script tag and rely on the global
-      if (!document.querySelector('script[data-mediapipe-face_mesh]')) {
-        const s = document.createElement('script');
-        s.setAttribute('data-mediapipe-face_mesh', '1');
-        s.src = cdn;
-        s.async = true;
-        document.head.appendChild(s);
-      }
-      // Return an object-like placeholder; the constructor may be on window later
-      return {};
-    }
-  }
-}
-
-async function createFaceMesh() {
-  if (faceMesh) return faceMesh;
-  const mod = await ensureFaceMeshModule();
-  let FaceMeshCtor = mod.FaceMesh || mod.default?.FaceMesh || mod.default || mod;
-  if (typeof FaceMeshCtor !== 'function') {
-    // try global value (common for UMD builds served via CDN)
-    FaceMeshCtor = window.FaceMesh || window.MPFaceMesh || FaceMeshCtor;
-  }
-  if (typeof FaceMeshCtor !== 'function') {
-    throw new Error('FaceMesh constructor not found after dynamic import and CDN fallback');
-  }
-  faceMesh = new FaceMeshCtor({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-  faceMesh.onResults(onResults);
-  return faceMesh;
-}
+const faceMesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+faceMesh.onResults(onResults);
 
 async function init() {
   try {
@@ -374,15 +335,8 @@ async function init() {
   await startCamera();
   showLoader('Starting video processing...');
 
-  // ensure FaceMesh module is ready and bound
-  try {
-    await createFaceMesh();
-  } catch (err) {
-    console.warn('FaceMesh init warning:', err);
-  }
-
   // feed frames and wait for first processed result or timeout
-  async function loop() { if (faceMesh) await faceMesh.send({ image: video }); requestAnimationFrame(loop); }
+  async function loop() { await faceMesh.send({ image: video }); requestAnimationFrame(loop); }
   loop();
 
   // wait for first frame processed (or 5s timeout)
