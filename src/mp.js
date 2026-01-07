@@ -1,5 +1,5 @@
 // OpenCV + MediaPipe demo script
-import { FaceMesh } from '@mediapipe/face_mesh';
+// Load MediaPipe FaceMesh dynamically (supports dev bundler import, with CDN fallback for static hosts)
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
@@ -308,9 +308,28 @@ function onResults(results) {
   }
 }
 
-const faceMesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-faceMesh.onResults(onResults);
+let faceMesh = null;
+
+async function ensureFaceMeshModule() {
+  // Try bundler-resolved package first; if that fails (browser can't resolve bare specifier), fall back to CDN
+  try {
+    return await import('@mediapipe/face_mesh');
+  } catch (err) {
+    // Browser / static host won't resolve bare specifiers — import from jsDelivr instead
+    const cdn = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
+    return await import(/* @vite-ignore */ cdn);
+  }
+}
+
+async function createFaceMesh() {
+  if (faceMesh) return faceMesh;
+  const mod = await ensureFaceMeshModule();
+  const FaceMeshCtor = mod.FaceMesh || mod.default?.FaceMesh || mod.default || mod;
+  faceMesh = new FaceMeshCtor({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  faceMesh.onResults(onResults);
+  return faceMesh;
+}
 
 async function init() {
   try {
@@ -324,8 +343,15 @@ async function init() {
   await startCamera();
   showLoader('Starting video processing...');
 
+  // ensure FaceMesh module is ready and bound
+  try {
+    await createFaceMesh();
+  } catch (err) {
+    console.warn('FaceMesh init warning:', err);
+  }
+
   // feed frames and wait for first processed result or timeout
-  async function loop() { await faceMesh.send({ image: video }); requestAnimationFrame(loop); }
+  async function loop() { if (faceMesh) await faceMesh.send({ image: video }); requestAnimationFrame(loop); }
   loop();
 
   // wait for first frame processed (or 5s timeout)
