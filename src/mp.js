@@ -50,6 +50,17 @@ async function loadOpenCV(timeout = 20000) {
     console.warn('dynamic import/loadOpenCV failed:', e);
   }
 
+  // Fallback: insert OpenCV CDN script (docs.opencv.org provides a UMD build exposing `cv`)
+  if (!document.querySelector('script[data-opencv-cdn]')) {
+    const s = document.createElement('script');
+    s.setAttribute('data-opencv-cdn', '1');
+    s.src = 'https://docs.opencv.org/4.7.0/opencv.js';
+    s.async = true;
+    s.onload = () => console.log('OpenCV CDN script loaded');
+    s.onerror = () => console.warn('Failed to load OpenCV from CDN');
+    document.head.appendChild(s);
+  }
+
   return new Promise((resolve, reject) => {
     function check() {
       if (window.cv && typeof window.cv.Mat !== 'undefined') return resolve(window.cv);
@@ -317,14 +328,34 @@ async function ensureFaceMeshModule() {
   } catch (err) {
     // Browser / static host won't resolve bare specifiers — import from jsDelivr instead
     const cdn = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
-    return await import(/* @vite-ignore */ cdn);
+    try {
+      return await import(/* @vite-ignore */ cdn);
+    } catch (e) {
+      // As a last resort, inject the script tag and rely on the global
+      if (!document.querySelector('script[data-mediapipe-face_mesh]')) {
+        const s = document.createElement('script');
+        s.setAttribute('data-mediapipe-face_mesh', '1');
+        s.src = cdn;
+        s.async = true;
+        document.head.appendChild(s);
+      }
+      // Return an object-like placeholder; the constructor may be on window later
+      return {};
+    }
   }
 }
 
 async function createFaceMesh() {
   if (faceMesh) return faceMesh;
   const mod = await ensureFaceMeshModule();
-  const FaceMeshCtor = mod.FaceMesh || mod.default?.FaceMesh || mod.default || mod;
+  let FaceMeshCtor = mod.FaceMesh || mod.default?.FaceMesh || mod.default || mod;
+  if (typeof FaceMeshCtor !== 'function') {
+    // try global value (common for UMD builds served via CDN)
+    FaceMeshCtor = window.FaceMesh || window.MPFaceMesh || FaceMeshCtor;
+  }
+  if (typeof FaceMeshCtor !== 'function') {
+    throw new Error('FaceMesh constructor not found after dynamic import and CDN fallback');
+  }
   faceMesh = new FaceMeshCtor({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
   faceMesh.onResults(onResults);
