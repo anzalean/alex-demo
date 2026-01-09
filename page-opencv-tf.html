@@ -9,20 +9,34 @@
   <body>
     <div id="loader" class="loader">Loading...</div>
     <main>
-      <h1>OpenCV + TensorFlow — Head & Eye Tracking</h1>
-      <div class="video-wrap">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
+      <div class="demo-grid">
+        <div class="video-wrap">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <section id="metrics">
+          <div class="demo-title">OpenCV + TensorFlow — Head & Eye Tracking</div>
+          <div><strong>Face detected:</strong> <span id="presence">—</span></div>
+          <div><strong>Head tilt/turn:</strong> <span id="head-metrics">—</span></div>
+          <div><strong>Left eye gaze:</strong> <span id="left-eye">—</span></div>
+          <div><strong>Right eye gaze:</strong> <span id="right-eye">—</span></div>
+          <div><strong>Left eye:</strong> <span id="left-eye-state">—</span></div>
+          <div><strong>Right eye:</strong> <span id="right-eye-state">—</span></div>
+          <div><strong>Attention (looking at screen):</strong> <span id="attention">—</span></div>
+        </section>
       </div>
-      <section id="metrics">
-        <div><strong>Presence:</strong> <span id="presence">—</span></div>
-        <div><strong>Head (deg):</strong> <span id="head-metrics">—</span></div>
-        <div><strong>Left eye (gaze):</strong> <span id="left-eye">—</span></div>
-        <div><strong>Right eye (gaze):</strong> <span id="right-eye">—</span></div>
-        <div><strong>Left eye state:</strong> <span id="left-eye-state">—</span></div>
-        <div><strong>Right eye state:</strong> <span id="right-eye-state">—</span></div>
-        <div><strong>Attention:</strong> <span id="attention">—</span></div>
-      </section>
+      <div class="cheatsheet">
+        <strong>Cheat sheet</strong>
+        <ul>
+          <li><strong>Face detected:</strong> Whether a face is visible to the camera.</li>
+          <li><strong>Head pose (Pitch / Yaw):</strong> <em>Pitch</em> — nod up/down; <em>Yaw</em> — turn left/right. Values are in degrees.</li>
+          <li><strong>Roll:</strong> Rotation around the axis from nose to back of the head (tilt left/right).</li>
+          <li><strong>Eye gaze:</strong> Direction of gaze relative to the center of the screen (small offsets indicate left/right/up/down).</li>
+          <li><strong>Eye (open/closed):</strong> Determined by Eye Aspect Ratio (EAR). Low EAR → eye likely closed.</li>
+          <li><strong>Attention:</strong> Indicates whether the person is likely looking at the screen. This uses a combination: face visible, head facing the screen (angle thresholds), and at least one eye open.</li>
+          <li><strong>Distance (estimate):</strong> Approximate distance to the camera estimated from face size and focal approximation (relative trend, not absolute).</li>
+        </ul>
+      </div>
       <p class="notice">Back to <a href="/">menu</a></p>
     </main>
     <script type="module" src="./src/tf.js"></script>
