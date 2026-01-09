@@ -15,6 +15,7 @@
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@opencvjs/web": "^4.13.0-release.1",
     "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.0",
     "webgazer": "^3.4.0"
   }
 }

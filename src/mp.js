@@ -242,8 +242,8 @@ function computePoseAndEyes(cv, landmarks) {
   const present = bboxAreaRel > PRESENCE_AREA_THRESH;
 
   // Attention logic: attentive only when present, facing forward, and at least one eye open.
-  const YAW_THRESH = 30; // degrees (relaxed)
-  const PITCH_THRESH = 30; // degrees (relaxed)
+  const YAW_THRESH = 50; // degrees (relaxed)
+  const PITCH_THRESH = 50; // degrees (relaxed)
   const a = angles && angles.norm ? angles.norm : angles;
   const facingForward = a ? (Math.abs(a.yaw) < YAW_THRESH && Math.abs(a.pitch) < PITCH_THRESH) : false;
   const eyesClosed = !(leftOpen || rightOpen);
